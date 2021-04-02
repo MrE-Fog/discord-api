@@ -11,8 +11,10 @@
         do { if (DEBUG) fprintf(stderr, "%s:%d:%s(): " msg "\n", __FILE__, \
                                 __LINE__, __func__); } while (0)
 
-#define DISCORD_GATEWAY_HOSTNAME  ("gateway.discord.gg")
-#define DISCORD_GATEWAY_PORT      (443)
+#define DISCORD_GATEWAY_HOSTNAME  "gateway.discord.gg"
+#define DISCORD_GATEWAY_PORT      443
+#define DISCORD_GATEWAY_VERSION   "8"
+#define DISCORD_GATEWAY_ENC       "json"
 
 static char convert[64];
 
