@@ -15,6 +15,7 @@ SSL *ssl_create_ssl (void);
 bool ssl_connect_tcp_connection (SSL * ssl, int sockfd);
 
 void ssl_tcp_write (SSL * ssl, const char *data);
+void ssl_tcp_read (SSL * ssl, char *buf, size_t bufsize);
 
 void ssl_close_tcp_connection (SSL * ssl);
 

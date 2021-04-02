@@ -11,6 +11,7 @@ ssl_free_context (SSL * ssl)
   int sfd = SSL_get_fd (ssl);
   if (sfd >= 0)
     {
+      debug_print ("closing TCP socket");
       SSL_shutdown (ssl);	/* pray that this returns 0 */
       close (sfd);
     }
@@ -77,7 +78,13 @@ ssl_close_tcp_connection (SSL * ssl)
 }
 
 void
-ssl_tcp_write (SSL * ssl, const char *data)
+ssl_tcp_write (SSL * ssl, const char * data)
 {
   SSL_write (ssl, data, strlen (data));
+}
+
+void
+ssl_tcp_read (SSL * ssl, char * buf, size_t bufsize)
+{
+  SSL_read (ssl, buf, bufsize);
 }

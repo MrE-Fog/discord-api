@@ -4,8 +4,7 @@
 #include "tcp.h"
 #include "discord.h"
 #include "common.h"
-
-discord_state_t* dstate;
+#include "websocket.h"
 
 int
 create_ssl_socket (SSL * ssl, const char * hostname, unsigned short port)
@@ -37,13 +36,14 @@ main (int argc, char ** argv)
 
   ssl_init_openssl ();
 
-  dstate = discord_init_state (argv[1]);
+  discord_state_t *dstate = discord_init_state (argv[1]);
   dstate->ssl = ssl_create_ssl ();
   dstate->ctx = SSL_get_SSL_CTX (dstate->ssl);
   debug_print ("created dstate and constructed SSL context");
 
   dstate->sockfd = create_ssl_socket (dstate->ssl, DISCORD_GATEWAY_HOSTNAME, DISCORD_GATEWAY_PORT);
-  printf ("sockfd=%d\n", dstate->sockfd);
+
+  discord_connect_gateway (dstate);
 
   debug_print ("freeing SSL context and destroying dstate");
   ssl_free_context (dstate->ssl);
