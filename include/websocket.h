@@ -26,7 +26,7 @@ bool ws_upgrade_connection (int, const char*, const char*,
     write_function_t, read_function_t);
 
 size_t
-read_until (const char *data, const char *cmp)
+wsutil_read_until (const char *data, const char *cmp)
 {
   size_t i = 0,
          data_len = strlen (data),
