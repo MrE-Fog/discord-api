@@ -1,7 +1,7 @@
 #ifndef __COMMON_H
 #define __COMMON_H
 
-#define DEBUG (1)
+#define DEBUG (0)
 
 #include <stdio.h>
 #include <math.h>
