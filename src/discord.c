@@ -15,7 +15,6 @@ discord_write (const char *msg)
       debug_print ("can't write on uninitialized dstate");
       return;
     }
-  printf ("\n%s\n", msg);
   ssl_tcp_write (dstate->ssl, msg);
 }
 
