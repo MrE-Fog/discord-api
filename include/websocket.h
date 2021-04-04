@@ -27,6 +27,7 @@ bool ws_upgrade_connection (int, const char*, const char*,
 
 size_t
 wsutil_read_until (const char *data, const char *cmp);
+
 bool
 wsutil_parse_headers (char *** out, const char ** hdr_mask, const char * data);
 struct websocket_response*
