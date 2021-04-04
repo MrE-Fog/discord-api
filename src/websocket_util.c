@@ -1,6 +1,6 @@
 #include <ctype.h>
 #include "websocket.h"
-
+#include "dict.h"
 
 size_t
 wsutil_read_until (const char *data, const char *cmp)
@@ -33,8 +33,8 @@ wsutil_strncmp_lower (const char *cmp1, const char *cmp2, size_t n)
   return false;
 }
 
-bool
-wsutil_parse_headers (char *** out, const char ** hdr_mask, const char * data)
+dict_t*
+wsutil_parse_headers (const char ** hdr_mask, const char * data)
 {
   size_t crlf_idx = wsutil_read_until (data, HEADER_ENDL);
 
@@ -51,10 +51,14 @@ wsutil_parse_headers (char *** out, const char ** hdr_mask, const char * data)
     }
 
   /* parse over each CRLF-terminated line */
-  size_t cur_idx, hdr_mask_len;
+  size_t cur_idx, hdr_mask_len,
+          key_length, value_length;
+  char key[64];
+  char value[64];
   const char *cur_hdr_mask;
 
-  char **parsed_hdrs = (char **)calloc (sizeof (char *), wsutil_strarray_len (hdr_mask));
+  dict_t *dict = dict_new (128);
+  dict_add_item (dict, "http", "101");
 
   while ( crlf_idx != -1)
     {
@@ -63,20 +67,28 @@ wsutil_parse_headers (char *** out, const char ** hdr_mask, const char * data)
         break;
       else if (!cur_idx)
         break;
-      // &data[crlf_idx] to &data[crlf_idx+cur_idx] = line
-      
+
       for (size_t hdr_idx = 0; cur_hdr_mask = hdr_mask[hdr_idx]; ++hdr_idx)
         {
           hdr_mask_len = strlen (cur_hdr_mask);
           if (wsutil_strncmp_lower (&data[crlf_idx], cur_hdr_mask, hdr_mask_len))
             continue;
-          printf ("%.*s\n", cur_idx, &data[crlf_idx]);
+          key_length = wsutil_read_until (&data[crlf_idx], ":");
+          memcpy (key, &data[crlf_idx], key_length);
+          key[key_length] = '\0';
+          
+          /* +0x2 offset assuming `:<SPACE>` between key/value */
+          value_length = wsutil_read_until (&data[crlf_idx + key_length + 2], HEADER_ENDL);
+          memcpy (value, &data[crlf_idx + key_length + 2], value_length);
+          value[value_length] = '\0';
+
+          dict_add_item (dict, key, value);
         }
 
       crlf_idx += cur_idx;
     }
 
-  free (parsed_hdrs);
+  return dict;
 }
 
 struct websocket_response*
@@ -90,9 +102,9 @@ wsutil_parse_response (const char *ws_key, const char *server_response)
     "connection",
     "sec-websocket-accept",
     "sec-websocket-extensions",
-    "sec-websocket-protocol", 0
+    "sec-websocket-protocol",
+    0  /* term */
     };
-  char **parsed_hdrs;
-  wsutil_parse_headers (&parsed_hdrs, hdr_mask, server_response);
+  dict_t *parsed = wsutil_parse_headers (hdr_mask, server_response);
   free (ws_res);
 }
