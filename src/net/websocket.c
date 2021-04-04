@@ -47,7 +47,7 @@ ws_upgrade_connection (int sockfd, const char * host, const char * path,
   char *server_response = (char *)malloc (GENERIC_HEADER_SIZE);
   read_fn (server_response, GENERIC_HEADER_SIZE);
 
-  struct websocket_response *verif = wsutil_parse_response (server_response)  /* tbd */
+  struct websocket_response *verif = wsutil_parse_response (websocket_key, server_response);
 
   free (server_response);
   free ((void *)websocket_key);
