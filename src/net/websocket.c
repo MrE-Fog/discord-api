@@ -49,6 +49,7 @@ ws_upgrade_connection (int sockfd, const char * host, const char * path,
 
   struct websocket_response *verif = wsutil_parse_response (websocket_key, server_response);
 
+  free (verif);
   free (server_response);
   free ((void *)websocket_key);
   return true;

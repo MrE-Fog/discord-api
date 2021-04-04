@@ -12,7 +12,6 @@ dict_new (size_t initial_capacity)
   dict_t *dict = (dict_t *)malloc (sizeof (dict_t));
   dict->array = (dict_item_t *)calloc (initial_capacity, sizeof (dict_item_t));
   dict->capacity = initial_capacity;
-  dict->size = 0;
 
   for (size_t i = 0; i < initial_capacity; ++i)
     dict->array[i].in_use = false;
@@ -29,16 +28,17 @@ dict_free (dict_t *dict)
 }
 
 size_t
-dict_hash_key (dict_t *dict, char *key)
+dict_hash_key (dict_t *dict, const char *key)
 {
   size_t weighted_sum = 0;
   for (size_t i = 0; i < strlen (key); ++i)
     weighted_sum += (i + 1) * key[i];
-  return weighted_sum & (dict->capacity - 1);
+  size_t res = weighted_sum & (dict->capacity - 1);
+  return res;
 }
 
 size_t
-dict_add_item (dict_t *dict, char *key, void *data)
+dict_add_item (dict_t *dict, const char *key, void *data)
 {
   dict_item_t dict_item = {
       .in_use = true,
@@ -50,11 +50,12 @@ dict_add_item (dict_t *dict, char *key, void *data)
   if (dict->array[hash].in_use)
     debug_print ("woops, collision, not handling this");
   memcpy (&dict->array[hash], &dict_item, sizeof (dict_item_t));
+  printf ("writing to: %x\n", &dict->array[hash]);
   return hash;
 }
 
 bool
-dict_remove_item (dict_t *dict, char *key)
+dict_remove_item (dict_t *dict, const char *key)
 {
   debug_print ("removing dictionary item");
   size_t hash = dict_hash_key (dict, key);
@@ -65,12 +66,12 @@ dict_remove_item (dict_t *dict, char *key)
 }
 
 void*
-dict_get_item (dict_t *dict, char *key)
+dict_get_item (dict_t *dict, const char *key)
 {
   size_t hash = dict_hash_key (dict, key);
   if (!dict->array[hash].in_use)
     return NULL;
-  else if (dict->array[hash].key != key)
+  else if (strcmp (dict->array[hash].key, key))
     return NULL;
   return dict->array[hash].value;
 }

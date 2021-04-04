@@ -42,23 +42,22 @@ wsutil_parse_headers (const char ** hdr_mask, const char * data)
   if (crlf_idx == -1)
     {
       debug_print ("some weird ass request header lmao, no CRLFs???");
-      return false;
+      return NULL;
     }
   else if (!!strncmp (hdr_mask[0], data, crlf_idx))
     {
       debug_print ("mismatching request methods");
-      return false;
+      return NULL;
     }
 
   /* parse over each CRLF-terminated line */
   size_t cur_idx, hdr_mask_len,
           key_length, value_length;
-  char key[64];
-  char value[64];
+  char *value;
   const char *cur_hdr_mask;
 
   dict_t *dict = dict_new (128);
-  dict_add_item (dict, "http", "101");
+  dict_add_item (dict, "http", (void *)"101");
 
   while ( crlf_idx != -1)
     {
@@ -74,20 +73,18 @@ wsutil_parse_headers (const char ** hdr_mask, const char * data)
           if (wsutil_strncmp_lower (&data[crlf_idx], cur_hdr_mask, hdr_mask_len))
             continue;
           key_length = wsutil_read_until (&data[crlf_idx], ":");
-          memcpy (key, &data[crlf_idx], key_length);
-          key[key_length] = '\0';
           
           /* +0x2 offset assuming `:<SPACE>` between key/value */
           value_length = wsutil_read_until (&data[crlf_idx + key_length + 2], HEADER_ENDL);
+          value = (char *)calloc (sizeof (char), 64);
           memcpy (value, &data[crlf_idx + key_length + 2], value_length);
           value[value_length] = '\0';
 
-          dict_add_item (dict, key, value);
+          dict_add_item (dict, cur_hdr_mask, value);
         }
 
       crlf_idx += cur_idx;
     }
-
   return dict;
 }
 
@@ -105,6 +102,12 @@ wsutil_parse_response (const char *ws_key, const char *server_response)
     "sec-websocket-protocol",
     0  /* term */
     };
-  dict_t *parsed = wsutil_parse_headers (hdr_mask, server_response);
-  free (ws_res);
+  dict_t *dict = wsutil_parse_headers (hdr_mask, server_response);
+
+  ws_res->is_101 = (strcmp ((const char *)dict_get_item (dict, "http"), "101") == 0);
+  ws_res->is_upgrade_hdr = (strcmp ((const char *)dict_get_item (dict, "upgrade"), "websocket") == 0);
+  ws_res->is_connection_hdr = (strcmp ((const char *)dict_get_item (dict, "connection"), "upgrade") == 0);
+
+  dict_free (dict);
+  return ws_res;
 }

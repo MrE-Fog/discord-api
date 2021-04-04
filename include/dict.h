@@ -7,14 +7,13 @@
 
 typedef struct {
   bool in_use;
-  char *key;
+  const char *key;
   void *value;
 } dict_item_t;
 
 typedef struct {
   dict_item_t *array;
   size_t capacity;
-  size_t size;
 } dict_t;
 
 dict_t*
@@ -24,15 +23,15 @@ bool
 dict_free (dict_t * dict);
 
 size_t
-dict_add_item (dict_t * dict, char * key, void * data);
+dict_add_item (dict_t * dict, const char * key, void * data);
 
 bool
-dict_remove_item (dict_t * dict, char * key);
+dict_remove_item (dict_t * dict, const char * key);
 
 void*
-dict_get_item (dict_t * dict, char * key);
+dict_get_item (dict_t * dict, const char * key);
 
 size_t
-dict_hash_key (dict_t * dict, char * key);
+dict_hash_key (dict_t * dict, const char * key);
 
 #endif  /* __DICT_H */
