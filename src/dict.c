@@ -50,7 +50,6 @@ dict_add_item (dict_t *dict, const char *key, void *data)
   if (dict->array[hash].in_use)
     debug_print ("woops, collision, not handling this");
   memcpy (&dict->array[hash], &dict_item, sizeof (dict_item_t));
-  printf ("writing to: %x\n", &dict->array[hash]);
   return hash;
 }
 

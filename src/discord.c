@@ -51,11 +51,16 @@ discord_init_state (const char *token)
 bool
 discord_connect_gateway (discord_state_t *dstate)
 {
-  ws_upgrade_connection (dstate->sockfd, DISCORD_GATEWAY_HOSTNAME,
-      "?v=" DISCORD_GATEWAY_VERSION
-      "&encoding=" DISCORD_GATEWAY_ENC,
-      dstate->write_message, dstate->read_message
-      );
+  if (!ws_upgrade_connection (dstate->sockfd, DISCORD_GATEWAY_HOSTNAME,
+        "?v=" DISCORD_GATEWAY_VERSION
+        "&encoding=" DISCORD_GATEWAY_ENC,
+        dstate->write_message, dstate->read_message
+        ))
+      return false;
+  char heartbeat_info[65536];
+  discord_read (heartbeat_info, sizeof (heartbeat_info));
+  websocket_msg_t ws = ws_read_message (heartbeat_info);
+  return true;
 }
 
 bool
@@ -69,6 +74,7 @@ discord_dtor_state (discord_state_t *state)
     }
   else if (state->conn_state == CONNECTED)
     {
+      debug_print ("closing connected state");
       ssl_close_tcp_connection (state->ssl);
       free (state);
       return true;
