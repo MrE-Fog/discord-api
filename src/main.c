@@ -43,8 +43,12 @@ main (int argc, char ** argv)
 
   dstate->sockfd = create_ssl_socket (dstate->ssl, DISCORD_GATEWAY_HOSTNAME, DISCORD_GATEWAY_PORT);
 
-  discord_connect_gateway (dstate);
+  if (!discord_connect_gateway (dstate))
+    goto exit_proc;
+  
+  printf ("connected to gateway!");
 
+exit_proc:
   debug_print ("freeing SSL context and destroying dstate");
   ssl_free_context (dstate->ssl);
   discord_dtor_state (dstate);

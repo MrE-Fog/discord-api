@@ -1,6 +1,8 @@
 #include <ctype.h>
 #include "websocket.h"
 #include "dict.h"
+#include "sha1.h"
+#include "base64.h"
 
 size_t
 wsutil_read_until (const char *data, const char *cmp)
@@ -88,6 +90,21 @@ wsutil_parse_headers (const char ** hdr_mask, const char * data)
   return dict;
 }
 
+bool
+wsutil_verify_wskey (const char *ws_key, const char *server_key)
+{
+  char concat[strlen (ws_key) + strlen (WS_MAGIC) + 1] = {0};
+  char *sha1_concat, *b64_sha1_concat;
+  strcat ((char *)memcpy (concat, ws_key, strlen (ws_key)), WS_MAGIC);
+  sha1_concat = sha1_create_digest (concat);
+  b64_sha1_concat = (char *)calloc (sizeof (char), BASE64_ENCODE_LEN (SHA_DIGEST_LENGTH) + 1);
+  base64_encode (b64_sha1_concat, sha1_concat, SHA_DIGEST_LENGTH);
+  int res = strcmp (b64_sha1_concat, server_key);
+  free (b64_sha1_concat);
+  free (sha1_concat);
+  return !res;
+}
+
 struct websocket_response*
 wsutil_parse_response (const char *ws_key, const char *server_response)
 {
@@ -104,10 +121,26 @@ wsutil_parse_response (const char *ws_key, const char *server_response)
     };
   dict_t *dict = wsutil_parse_headers (hdr_mask, server_response);
 
-  ws_res->is_101 = (strcmp ((const char *)dict_get_item (dict, "http"), "101") == 0);
-  ws_res->is_upgrade_hdr = (strcmp ((const char *)dict_get_item (dict, "upgrade"), "websocket") == 0);
-  ws_res->is_connection_hdr = (strcmp ((const char *)dict_get_item (dict, "connection"), "upgrade") == 0);
+  if (dict == NULL)
+    return NULL;
+
+  ws_res->is_101 = !strcmp ((const char *)dict_get_item (dict, "http"), "101");
+  ws_res->is_upgrade_hdr = !strcmp ((const char *)dict_get_item (dict, "upgrade"), "websocket");
+  ws_res->is_connection_hdr = !strcmp ((const char *)dict_get_item (dict, "connection"), "upgrade");
+  ws_res->is_extensions = dict_get_item (dict, "sec-websocket-extensions") != NULL;
+  ws_res->is_protocols = dict_get_item (dict, "sec-websocket-protocol") != NULL;
+  ws_res->is_wskey_hash = wsutil_verify_wskey (ws_key, (const char*)dict_get_item (dict, "sec-websocket-accept"));
 
   dict_free (dict);
   return ws_res;
+}
+
+void
+wsutil_print_message (websocket_msg_t msg)
+{
+  printf ("is final: %s, rsv bits: %d %d %d, opcode: %x\n"
+          "is masked: %s, payload length: %d, extended length: %d\n"
+          "masking key: %d\n data: %s\n", msg.fin? "yes": "no", !!msg.rsv1, !!msg.rsv2, !!msg.rsv3,
+          msg.opcode, msg.mask? "yes": "no", msg.payload_length, msg.ext_payload_length,
+          msg.masking_key, msg.payload_data);
 }
