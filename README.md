@@ -4,7 +4,7 @@ the starts of a discord api written in openssl-wrapped sockets probably
 As of Tue, 6 Apr my development goals are:
 
 - Establish heartbeat loop with Discord's gateway
-- Implement JSON encoding/decoding library
+- Implement JSON encoding/decoding library (partially complete as of Wed, 7 Apr)
 - Identify with Discord's gateway to authenticate
 - Implement basic API manipulation methods
 
