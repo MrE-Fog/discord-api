@@ -50,7 +50,7 @@ ws_read_message (const char *msg)
     }
   
   wsutil_print_message (ws_msg);
-  /* ISSUE: in testing, a 114-byte payload is denoted as 118 bytes per payload length? */
+
   return ws_msg;
 }
 
