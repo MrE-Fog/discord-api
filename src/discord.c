@@ -79,8 +79,8 @@ discord_dtor_state (discord_state_t *state)
       free (state);
       return true;
     }
-  else if (state->conn_state == AUTHENTICATED)
+  else
     {
-      assert (0);  /* unimplemented */
+      return false;
     }
 }

@@ -139,7 +139,7 @@ void
 wsutil_print_message (websocket_msg_t msg)
 {
   printf ("is final: %s, rsv bits: %d %d %d, opcode: %x\n"
-          "is masked: %s, payload length: %d, extended length: %d\n"
+          "is masked: %s, payload length: %d, extended length: %lld\n"
           "masking key: %d\n data: %s\n", msg.fin? "yes": "no", !!msg.rsv1, !!msg.rsv2, !!msg.rsv3,
           msg.opcode, msg.mask? "yes": "no", msg.payload_length, msg.ext_payload_length,
           msg.masking_key, msg.payload_data);

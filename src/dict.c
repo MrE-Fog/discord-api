@@ -19,7 +19,7 @@ dict_new (size_t initial_capacity)
   return dict;
 }
 
-bool
+void
 dict_free (dict_t *dict)
 {
   debug_print ("freeing dictionary");

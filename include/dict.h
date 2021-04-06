@@ -19,7 +19,7 @@ typedef struct {
 dict_t*
 dict_new (size_t initial_capacity);
 
-bool
+void
 dict_free (dict_t * dict);
 
 size_t
