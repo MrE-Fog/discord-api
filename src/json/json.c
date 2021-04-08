@@ -25,7 +25,6 @@ json_parse_array (json_array_t** out, const char *string)
 
   for (;;)
     {
-      printf ("array: %s\n", &string[idx]);
       switch (string[idx])
         {
           case (QUOTE_MARK):
@@ -36,6 +35,7 @@ json_parse_array (json_array_t** out, const char *string)
                 goto on_error;
               }
             idx += json_parse_string (&current_token.as_string, &string[idx+1]) + 1;
+            current_token.__dynamic_flag = DYN_STRING_MASK;
             pstate.expecting_value_sep = true;
             break;
           }
@@ -46,8 +46,8 @@ json_parse_array (json_array_t** out, const char *string)
                 json_print_error ("parse", "expecting value separator, got object");
                 goto on_error;
               }
-            printf ("object DETECTED\n");
             current_token.as_object = json_parse_item (&string[idx+1], &idx_skip);
+            current_token.__dynamic_flag = DYN_ITEM_MASK;
             idx += idx_skip + 1;
             pstate.expecting_value_sep = true;
             break;
@@ -80,6 +80,7 @@ json_parse_array (json_array_t** out, const char *string)
                 goto on_error;
               }
             idx += json_parse_array (&current_token.as_array, &string[idx+1]) + 1;
+            current_token.__dynamic_flag = DYN_ARRAY_MASK;
             pstate.expecting_value_sep = true;
             break;
           }
@@ -121,9 +122,8 @@ json_parse_array (json_array_t** out, const char *string)
         }
     }
 realloc_array:
-  realloc (array, sizeof (json_array_t) * item_count);
+  realloc (array, sizeof (json_array_t) * item_count + 2);  /* extra null structure for freeing later */
   *out = array;
-  printf ("allocating space for %zu items\n", item_count);
   return idx;
 on_error:
   *out = NULL;
@@ -165,7 +165,6 @@ json_parse_string (json_string_t* out, const char *string)
             else
               {
                 *out = parsed;
-                printf ("PARSED string is: %s, idx = %zu\n", parsed, idx+1);
                 return idx + 1;
               }
             break;
@@ -204,7 +203,7 @@ json_parse_item (const char *string, size_t *idx_skip)
 {
   json_item_t *items = (json_item_t *)calloc (DEFAULT_BINSIZE, sizeof (json_item_t));
   json_item_t current_token;
-
+  current_token.__dynamic_flag = 0;
   parse_state_t pstate = {
     .expecting_key = true,
     .expecting_value_sep = false,
@@ -217,7 +216,6 @@ json_parse_item (const char *string, size_t *idx_skip)
   size_t idx = 0, item_idx;
   for (;;)
     {
-      printf ("in PARSE ITEM %s\n", &string[idx]);
       switch (string[idx])
         {
           case (BEGIN_ARRAY):
@@ -228,6 +226,7 @@ json_parse_item (const char *string, size_t *idx_skip)
                 goto on_error;
               }
             idx += json_parse_array (&current_token.value.as_array, &string[idx+1]) + 1;
+            current_token.__dynamic_flag = DYN_ARRAY_MASK;
             if (current_token.value.as_array == NULL)
                 goto on_error;
             pstate.expecting_value_sep = true;
@@ -239,6 +238,7 @@ json_parse_item (const char *string, size_t *idx_skip)
             if (pstate.expecting_key)
               {
                 idx += json_parse_string (&current_token.key, &string[idx+1]) + 1;
+                current_token.__dynamic_flag = DYN_STRING_MASK;
                 pstate.expecting_name_sep = true;
                 pstate.expecting_key = false;
               }
@@ -250,6 +250,7 @@ json_parse_item (const char *string, size_t *idx_skip)
                     goto on_error;
                   }
                   idx += json_parse_string (&current_token.value.as_string, &string[idx+1]) + 1;
+                  current_token.__dynamic_flag = DYN_STRING_MASK;
                   pstate.expecting_value_sep = true;
               }
             break;
@@ -307,6 +308,7 @@ json_parse_item (const char *string, size_t *idx_skip)
                 goto on_error;
               }
             current_token.value.as_object = json_parse_item (&string[idx + 1], &item_idx);
+            current_token.__dynamic_flag = DYN_ITEM_MASK;
             idx += item_idx + 1;
             pstate.expecting_value_sep = true;
             break;
@@ -359,13 +361,14 @@ json_parse_item (const char *string, size_t *idx_skip)
                 printf ("invalid specifier is '%c'\n", string[idx]);
                 goto on_error;
               }
+            current_token.__dynamic_flag = 0;
             pstate.expecting_value_sep = true;
             break;
           }
         }
     }
 realloc_proc:
-  realloc (items, sizeof (json_item_t) * item_count);
+  realloc (items, sizeof (json_item_t) * item_count + 1);
   if (idx_skip != NULL)
     *idx_skip = idx + 1;
   return items;
@@ -397,20 +400,81 @@ json_get_nth (json_item_t* json, size_t n)
   return &(((json_item_t *)json)[n]);
 }
 
+void
+json_free_array (json_array_t *array)
+{
+  json_array_t *current_array;
+  for (size_t idx = 0; current_array = &array[idx]; ++idx)
+    {
+      if (!current_array->__dynamic_flag)
+        continue;
+      else if (current_array->__dynamic_flag > 0x4)  /* honestly don't even ask */
+        break;
+
+      switch (current_array->__dynamic_flag)
+        {
+          case (DYN_STRING_MASK):
+          {
+            free ((void *)current_array->as_string);
+            break;
+          }
+          case (DYN_ITEM_MASK):
+          {
+            json_free_item (current_array->as_object);
+            break;
+          }
+          case (DYN_ARRAY_MASK):
+          {
+            json_free_array (current_array->as_array);
+            break;
+          }
+        }
+    }
+    free ((void *)array);
+}
+
+void
+json_free_item (json_item_t *item)
+{
+  json_item_t *current_item;
+  for (size_t idx = 0; current_item = json_get_nth (item, idx); ++idx)
+    {
+      if (!current_item->__dynamic_flag)
+        continue;
+      else if (current_item->__dynamic_flag > 0x4)
+        break;
+
+      switch (current_item->__dynamic_flag)
+        {
+          case (DYN_STRING_MASK):
+          {
+            free ((void *)current_item->value.as_string);
+            break;
+          }
+          case (DYN_ITEM_MASK):
+          {
+            json_free_item (current_item->value.as_object);
+            break;
+          }
+          case (DYN_ARRAY_MASK):
+          {
+            json_free_array (current_item->value.as_array);
+            break;
+          }
+        }
+    }
+    free ((void *)item);
+}
+
 int
 main (void)
 {
-  json_item_t *json = json_loadstring (
-    "{\"t\":null,\"s\":null,\"op\":10,\"d\":{\"heartbeat_interval\":41250,\"_trace\":[\"[\\\"gateway-prd-main-bfr8\\\",{\\\"micros\\\":0.0}]\"]}}"
-  ).as_object;
+  json_item_t *json = json_loadstring ("{\"abc\": 1}").as_object;
   if (json == NULL)
     {
       puts ("error occurred in parsing");
       return EXIT_FAILURE;
     }
-  printf ("json['t'] = %s\n", json->value.as_null? "????": "null");
-  printf ("json['s'] = %s\n", json_get_nth (json, 1)->value.as_null? "????": "null");
-  printf ("json['op'] = %d\n", json_get_nth (json, 2)->value.as_integer);
-  printf ("json['d']['_trace'] = %s\n", json_get_nth (json_get_nth (json, 3)->value.as_object, 1)->value.as_array->as_string);
+  json_free_item (json);
   return EXIT_SUCCESS;
 }

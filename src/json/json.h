@@ -10,17 +10,21 @@
 #define DEFAULT_STRINGSIZE  128
 #define REALLOC_INCREMENT   32
 
+#define DYN_STRING_MASK 0x1
+#define DYN_ARRAY_MASK  0x2
+#define DYN_ITEM_MASK   0x4
+
 struct json_item;
 typedef struct json_item json_item_t;
 
 struct json_array;
 typedef struct json_array json_array_t;
 
-typedef const char*     json_string_t;
-typedef bool      json_bool_t;
-typedef uint64_t  json_int_t;
-typedef void*     json_null_t;
-typedef double    json_double_t;
+typedef const char* json_string_t;
+typedef bool        json_bool_t;
+typedef uint64_t    json_int_t;
+typedef void*       json_null_t;
+typedef double      json_double_t;
 
 typedef union json_generic {
   json_item_t*  as_object;
@@ -29,6 +33,7 @@ typedef union json_generic {
 
 struct json_array
 {
+  uint8_t __dynamic_flag;
   union
   {
     json_string_t as_string;
@@ -43,6 +48,7 @@ struct json_array
 
 struct json_item
 {
+  uint8_t __dynamic_flag;
   const char *key;
   union
   {
