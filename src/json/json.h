@@ -1,6 +1,7 @@
 #ifndef __JSON_H
 #define __JSON_H
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -28,16 +29,16 @@ typedef union json_generic {
 
 struct json_array
 {
-  union array_item
+  union
   {
-    json_string_t string;
-    json_bool_t   boolean;
-    json_int_t    integer;
-    json_null_t   null;
-    json_double_t decimal;
-    json_item_t*  object;
-    json_array_t* array;
-  } *items;
+    json_string_t as_string;
+    json_bool_t   as_boolean;
+    json_int_t    as_integer;
+    json_null_t   as_null;
+    json_double_t as_decimal;
+    json_item_t*  as_object;
+    json_array_t* as_array;
+  } item;
 };
 
 struct json_item
@@ -56,7 +57,9 @@ struct json_item
 };
 
 typedef struct {
-  bool expecting_key  :1;
+  bool expecting_key        :1;
+  bool expecting_value_sep  :1;
+  bool expecting_name_sep   :1;
   int64_t object_literals;
   int64_t array_literals;
 } parse_state_t;
@@ -64,11 +67,14 @@ typedef struct {
 json_generic_t
 json_loadstring (const char *string);
 
-json_array_t*
-json_parse_array (const char *string);
+size_t
+json_parse_array (json_array_t** out, const char *string);
+
+size_t
+json_parse_string (json_string_t* out, const char *string);
 
 json_item_t*
-json_parse_item (const char *string);
+json_parse_item (const char *string, size_t *idx_skip);
 
 void
 json_free_array (json_array_t *array);
@@ -78,8 +84,5 @@ json_free_item (json_item_t *item);
 
 void
 json_print_error (const char *nature, const char *string);
-
-size_t
-json_parse_string (json_string_t* out, const char *string);
 
 #endif  /* __JSON_H */
