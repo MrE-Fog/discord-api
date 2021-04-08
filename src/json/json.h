@@ -38,7 +38,7 @@ struct json_array
     json_double_t as_decimal;
     json_item_t*  as_object;
     json_array_t* as_array;
-  } item;
+  };
 };
 
 struct json_item
