@@ -8,7 +8,7 @@
 #define END_OBJECT    '\x7D'  /* } */
 #define NAME_SEP      '\x3A'  /* : */
 #define VALUE_SEP     '\x2C'  /* , */
-#define WHITESPACE    "\x20\x09\x0A\x0D"
+#define WHITESPACE    "\x20\x09\x0A\x0D" /* unused */
 
 /* literal names */
 #define LITERAL_FALSE "false"
